@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 from random import choice, randint, shuffle
 import pyperclip
+import json
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 
@@ -28,18 +29,43 @@ def save():
     website = website_entry.get()
     email = email_entry.get()
     password = password_entry.get()
-
+    new_data = {
+        website: {
+            'email':email,
+            'password':password
+        }
+    }
     if len(website) == 0 or len(password) == 0:
         messagebox.showinfo(title="Oops", message="Please make sure you haven't left any fields empty.")
     else:
-        is_ok = messagebox.askokcancel(title=website, message=f"These are the details entered: \nEmail: {email} "
-                                                      f"\nPassword: {password} \nIs it ok to save?")
+        is_ok = messagebox.askokcancel(title=website, message=f"These are the details entered: \nEmail: {email}\nPassword: {password} \nIs it ok to save?")
         if is_ok:
-            with open("data.txt", "a") as data_file:
-                data_file.write(f"{website} | {email} | {password}\n")
-                website_entry.delete(0, END)
-                password_entry.delete(0, END)
+            try:
+                with open('data.json','r') as data_file:
+                    data = json.load(data_file)
+            except FileNotFoundError:
+                with open('data.json','w') as data_file:
+                    json.dump(new_data,data_file,indent=4)
+            else:
+                data.update(new_data)
+                with open('data.json','w') as data_file:
+                    json.dump(data,data_file,indent=4)
+            finally:
+                website_entry.delete(0,END)
+                password_entry.delete(0,END)
 
+
+def find_password():
+    website_input = website_entry.get()
+    try:
+        with open('data.json','r') as file:
+            file = json.load(file)
+            website_dict = file[website_input]
+            messagebox.askokcancel(title=website_input, message=f"{website_input}\nyour email :{website_dict['email']}\nyour password:{website_dict['password']}")
+    except FileNotFoundError:
+        messagebox.askokcancel(title=website_input, message=f"File doesn't not exist")
+    except KeyError:
+        messagebox.askokcancel(title=website_input, message=f"No details for this website exist")
 
 # ---------------------------- UI SETUP ------------------------------- #
 
@@ -61,8 +87,8 @@ password_label = Label(text="Password:")
 password_label.grid(row=3, column=0)
 
 #Entries
-website_entry = Entry(width=46)
-website_entry.grid(row=1, column=1, columnspan=2)
+website_entry = Entry(width=26)
+website_entry.grid(row=1, column=1, columnspan=1)
 website_entry.focus()
 email_entry = Entry(width=46)
 email_entry.grid(row=2, column=1, columnspan=2)
@@ -71,6 +97,8 @@ password_entry = Entry(width=28)
 password_entry.grid(row=3, column=1)
 
 # Buttons
+search_button = Button(text='Search',command=find_password)
+search_button.grid(row=1,column=2)
 generate_password_button = Button(text="Generate Password", command=generate_password)
 generate_password_button.grid(row=3, column=2)
 add_button = Button(text="Add", width=39, command=save)
